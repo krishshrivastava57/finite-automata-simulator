@@ -30,7 +30,6 @@ finite-automata-simulator/
 │── index.html      # Structure and SVG-based visualization
 │── style.css       # Styling and UI design
 │── script.js       # Automata logic and simulation engine
-│── images/         # Screenshots (optional)
 ```
 
 ---
