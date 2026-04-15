@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FiniteViz — Automata Simulator</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+  <div class="grain"></div>
+  <div class="bg-grid"></div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <span class="logo-icon">⬡</span>
+      <span class="logo-text">FiniteViz</span>
+      <span class="logo-sub">Automata Simulator</span>
+    </div>
+    <nav class="nav-tabs">
+      <button class="nav-btn active" data-tab="dfa">DFA</button>
+      <button class="nav-btn" data-tab="nfa">NFA</button>
+    </nav>
+    <div class="header-badge">Theory of Automata</div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="app-layout">
+
+    <!-- Left Panel: Builder -->
+    <aside class="panel panel-left">
+      <div class="panel-header">
+        <span class="panel-label">STATES & TRANSITIONS</span>
+        <span class="panel-mode" id="mode-label">DFA Mode</span>
+      </div>
+
+      <!-- Alphabet -->
+      <div class="section">
+        <label class="field-label">Alphabet (Σ)</label>
+        <div class="input-row">
+          <input type="text" id="alphabet-input" class="field" placeholder="e.g. a,b or 0,1" value="0,1"/>
+          <button class="btn-icon" id="set-alphabet" title="Set Alphabet">✓</button>
+        </div>
+        <div class="symbol-chips" id="symbol-chips"></div>
+      </div>
+
+      <!-- States -->
+      <div class="section">
+        <label class="field-label">States (Q)</label>
+        <div class="input-row">
+          <input type="text" id="state-name" class="field" placeholder="State name e.g. q0"/>
+          <button class="btn-icon" id="add-state-btn" title="Add State">+</button>
+        </div>
+        <div class="state-list" id="state-list"></div>
+      </div>
+
+      <!-- Transitions -->
+      <div class="section">
+        <label class="field-label">Transitions (δ)</label>
+        <div class="transition-builder" id="transition-builder">
+          <select class="field select-field" id="trans-from"></select>
+          <span class="arrow-label">──<span id="trans-sym-label">─</span>──▶</span>
+          <select class="field select-field" id="trans-to"></select>
+        </div>
+        <div class="input-row mt-4">
+          <select class="field select-field" id="trans-sym"></select>
+          <button class="btn-icon" id="add-trans-btn" title="Add Transition">+</button>
+        </div>
+        <div class="trans-list" id="trans-list"></div>
+      </div>
+
+      <!-- Quick Load -->
+      <div class="section">
+        <label class="field-label">Quick Examples</label>
+        <div class="examples-grid">
+          <button class="example-btn" data-example="even-zeros">Even 0s</button>
+          <button class="example-btn" data-example="ends-with-1">Ends with 1</button>
+          <button class="example-btn" data-example="divisible-3">Div by 3</button>
+          <button class="example-btn" data-example="nfa-example">NFA Sample</button>
+        </div>
+      </div>
+
+      <button class="btn-danger" id="clear-all">⟳ Reset Everything</button>
+    </aside>
+
+    <!-- Center: Canvas -->
+    <section class="panel panel-canvas">
+      <div class="canvas-toolbar">
+        <button class="tool-btn active" id="tool-select" title="Select/Move">⊹ Select</button>
+        <button class="tool-btn" id="tool-pan" title="Pan Canvas">✥ Pan</button>
+        <div class="toolbar-sep"></div>
+        <button class="tool-btn" id="zoom-in" title="Zoom In">＋</button>
+        <button class="tool-btn" id="zoom-out" title="Zoom Out">－</button>
+        <button class="tool-btn" id="zoom-fit" title="Fit View">⊡ Fit</button>
+        <div class="toolbar-sep"></div>
+        <span class="canvas-hint" id="canvas-hint">Click canvas to add a state</span>
+      </div>
+      <div class="canvas-wrap" id="canvas-wrap">
+        <svg id="main-svg" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="var(--accent)"/>
+            </marker>
+            <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="var(--green)"/>
+            </marker>
+            <marker id="arrowhead-reject" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="var(--red)"/>
+            </marker>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <g id="svg-viewport">
+            <g id="edges-layer"></g>
+            <g id="nodes-layer"></g>
+          </g>
+        </svg>
+        <div class="canvas-empty" id="canvas-empty">
+          <div class="empty-icon">⬡</div>
+          <p>Click anywhere on the canvas<br/>to place your first state</p>
+        </div>
+      </div>
+
+      <!-- Transition Table -->
+      <div class="transition-table-wrap" id="table-wrap">
+        <div class="table-header">
+          <span>Transition Table (δ)</span>
+          <button class="close-table" id="close-table">✕</button>
+        </div>
+        <div class="table-scroll" id="table-content"></div>
+      </div>
+      <button class="show-table-btn" id="show-table">Δ Table</button>
+    </section>
+
+    <!-- Right Panel: Simulation -->
+    <aside class="panel panel-right">
+      <div class="panel-header">
+        <span class="panel-label">SIMULATION</span>
+      </div>
+
+      <div class="section">
+        <label class="field-label">Input String</label>
+        <div class="input-row">
+          <input type="text" id="sim-input" class="field" placeholder="e.g. 0110"/>
+          <button class="btn-icon" id="sim-run" title="Run">▶</button>
+        </div>
+        <div class="sim-tape" id="sim-tape"></div>
+      </div>
+
+      <div class="sim-controls">
+        <button class="ctrl-btn" id="sim-reset" title="Reset">⟲</button>
+        <button class="ctrl-btn" id="sim-prev" title="Step Back">◂</button>
+        <button class="ctrl-btn primary" id="sim-step" title="Step Forward">▸</button>
+        <button class="ctrl-btn" id="sim-auto" title="Auto Play">⏵</button>
+      </div>
+
+      <div class="sim-status" id="sim-status">
+        <div class="status-idle">Enter a string and press ▶ to simulate</div>
+      </div>
+
+      <!-- Step Log -->
+      <div class="section">
+        <label class="field-label">Computation Log</label>
+        <div class="log-box" id="log-box">
+          <div class="log-empty">No simulation running…</div>
+        </div>
+      </div>
+
+      <!-- NFA Paths -->
+      <div class="section" id="nfa-paths-section" style="display:none">
+        <label class="field-label">NFA Active Paths</label>
+        <div class="nfa-paths" id="nfa-paths"></div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <span class="stat-num" id="stat-states">0</span>
+          <span class="stat-lbl">States</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="stat-trans">0</span>
+          <span class="stat-lbl">Transitions</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="stat-alpha">0</span>
+          <span class="stat-lbl">Symbols</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-num" id="stat-steps">—</span>
+          <span class="stat-lbl">Steps</span>
+        </div>
+      </div>
+
+      <!-- Test Multiple -->
+      <div class="section">
+        <label class="field-label">Batch Test</label>
+        <textarea id="batch-input" class="field" rows="4" placeholder="One string per line&#10;0110&#10;101&#10;1111"></textarea>
+        <button class="btn-full" id="batch-run">Run All</button>
+        <div class="batch-results" id="batch-results"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Context Menu -->
+  <div class="context-menu" id="context-menu">
+    <button class="ctx-item" id="ctx-start">Set as Start State</button>
+    <button class="ctx-item" id="ctx-accept">Toggle Accept State</button>
+    <button class="ctx-item danger" id="ctx-delete">Delete State</button>
+  </div>
+
+  <!-- Result Overlay -->
+  <div class="result-overlay" id="result-overlay">
+    <div class="result-box" id="result-box">
+      <div class="result-icon" id="result-icon"></div>
+      <div class="result-title" id="result-title"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <button class="btn-close-result" id="close-result">Close</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
